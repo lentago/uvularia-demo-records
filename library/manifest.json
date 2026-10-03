@@ -99,7 +99,8 @@
     "library/files/policy/2016-02-10-conflict-of-interest-policy.txt": "26656fa2c06bec3ef8ac32abb7dfc7e1fabb2e33f869df5e0c125ddc1452cf8a",
     "library/files/policy/2024-01-17-conflict-of-interest-policy.txt": "15f7381d38917ce71f3c4d2fefb1ec6db817ee5847b966fb9fd7fe05a92d665d",
     "library/files/report/2024-11-01-annual-report.txt": "0066e5347758bf78f85323801687454baa95c8d76bfe5134932a3f5af162e82f",
-    "library/files/report/2025-11-01-annual-report.txt": "7e592d9668bc012898a15e31edba1dcff5c44afe6694ebf3edd8566ee8c66c08"
+    "library/files/report/2025-11-01-annual-report.txt": "7e592d9668bc012898a15e31edba1dcff5c44afe6694ebf3edd8566ee8c66c08",
+    "library/files/notice/2026-10-17-notice-of-regular-board-meeting.txt": "636cad11d06b9d605132a5d43a0c7fec7d643a7aa3013b21119b08b32592d0c6"
   },
   "generated_by": "demo/seed.py"
 }
