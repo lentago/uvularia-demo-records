@@ -5,7 +5,12 @@
     "satisfied_by": "2025-10-08-form-pc",
     "deadline": "2026-10-08",
     "published_at": "2025-10-08T09:00:00Z",
-    "gap": -5
+    "gap": -5,
+    "history": {
+      "window_days": 730,
+      "evaluated": 1,
+      "breaches": 0
+    }
   },
   {
     "id": "ma-corp-annual-report",
@@ -13,15 +18,25 @@
     "satisfied_by": "2025-11-01-annual-report",
     "deadline": "2026-11-01",
     "published_at": "2025-11-01T09:00:00Z",
-    "gap": -29
+    "gap": -29,
+    "history": {
+      "window_days": 730,
+      "evaluated": 1,
+      "breaches": 0
+    }
   },
   {
     "id": "ma-oml-meeting-notice",
-    "state": "green",
-    "satisfied_by": "2026-10-17-notice-of-regular-board-meeting-october-17-2026",
+    "state": "no-data",
+    "satisfied_by": null,
     "deadline": "2026-10-15",
-    "published_at": "2026-10-03T21:57:30Z",
-    "gap": -12
+    "published_at": null,
+    "gap": null,
+    "history": {
+      "window_days": 730,
+      "evaluated": 24,
+      "breaches": 2
+    }
   },
   {
     "id": "ma-oml-minutes-timely",
@@ -29,6 +44,11 @@
     "satisfied_by": "2026-08-19-board-minutes",
     "deadline": "2026-09-18",
     "published_at": "2026-09-17T10:00:00Z",
-    "gap": -1
+    "gap": -1,
+    "history": {
+      "window_days": 730,
+      "evaluated": 23,
+      "breaches": 8
+    }
   }
 ]
