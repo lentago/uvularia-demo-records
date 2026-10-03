@@ -27,11 +27,11 @@
   },
   {
     "id": "ma-oml-meeting-notice",
-    "state": "no-data",
-    "satisfied_by": null,
+    "state": "green",
+    "satisfied_by": "2026-10-17-notice-of-regular-board-meeting-october-17-2026",
     "deadline": "2026-10-15",
-    "published_at": null,
-    "gap": null,
+    "published_at": "2026-10-03T21:57:30Z",
+    "gap": -12,
     "history": {
       "window_days": 730,
       "evaluated": 24,
