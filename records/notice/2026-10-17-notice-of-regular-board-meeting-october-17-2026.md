@@ -6,10 +6,12 @@
 id: 2026-10-17-notice-of-regular-board-meeting-october-17-2026
 title: "Notice of regular board meeting, October 17, 2026"
 type: notice
-status: draft
+status: approved
 visibility: public
 effective: 2026-10-17
-certainty: reported
+approved: 2026-10-03
+source: {kind: text, file: library/files/notice/2026-10-17-notice-of-regular-board-meeting.txt, sha256: "636cad11d06b9d605132a5d43a0c7fec7d643a7aa3013b21119b08b32592d0c6"}
+certainty: verified
 subjects: [meetings, board, budget]
 tags: [2026]
 ---
@@ -17,6 +19,3 @@ tags: [2026]
 # Notice of regular board meeting, October 17, 2026
 
 The board of directors will meet on Friday, October 17, 2026 at 6:30 pm at the visitor center, 14 Mill Road. The agenda includes the fall stewardship report, the 2027 budget draft, and public comment.
-
-> **Add the original document by hand.** The file attached to the issue could not be downloaded automatically, so this record has no `source` yet. Put the original under `library/files/notice/`, add it to `library/manifest.json` with its sha256 (`sha256sum <file>`), and add a `source:` block to the frontmatter above. A reviewer must do this before approving the record.
-
