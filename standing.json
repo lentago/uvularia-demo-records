@@ -30,13 +30,5 @@
     "deadline": "2026-09-18",
     "published_at": "2026-09-17T10:00:00Z",
     "gap": -1
-  },
-  {
-    "id": "ma-oml-minutes-timely",
-    "state": "green",
-    "satisfied_by": "2026-08-19-board-minutes",
-    "deadline": "2026-09-18",
-    "published_at": "2026-09-17T10:00:00Z",
-    "gap": -1
   }
 ]
