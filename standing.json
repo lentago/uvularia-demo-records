@@ -1,11 +1,11 @@
 [
   {
     "id": "ma-ag-charity-annual-filing",
-    "state": "amber",
-    "satisfied_by": "2025-10-08-form-pc",
-    "deadline": "2026-10-08",
-    "published_at": "2025-10-08T09:00:00Z",
-    "gap": -4,
+    "state": "green",
+    "satisfied_by": "2026-10-03-annual-form-pc-filing-2026",
+    "deadline": "2027-10-03",
+    "published_at": "2026-10-04T03:29:32Z",
+    "gap": -364,
     "history": {
       "window_days": 730,
       "evaluated": 1,
