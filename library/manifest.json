@@ -49,6 +49,7 @@
     "library/files/filing/2024-10-09-form-pc.txt": "10c4a64b0e7f57e14788a77f5cba2fa6c611b13cf3ae8788b98ae008e8f8553b",
     "library/files/filing/2025-04-22-stewardship-permit.txt": "22d743db41089f1a07e8c954074e48ee6763f692efa1fd1b9b7fab5f72872f82",
     "library/files/filing/2025-10-08-form-pc.txt": "523a2e29912b43327bc24390f38cb20b076c7357416388e087060c8474f36fa2",
+    "library/files/filing/2026-10-03-annual-form-pc-filing-2026.txt": "53b8aec71c6f3fbb02baf6acaebcc3a19d01f8199eb96b08daeed4a26fe9bc3f",
     "library/files/minutes/2024-10-16-board-minutes.txt": "8154b45f6a24f8c5162e3def3bf265118b87ca82bc255c1fb680a9e77adae3ed",
     "library/files/minutes/2024-11-20-board-minutes.txt": "4c3c95b2f502932925dfd2e4766cf5780ca70d7c2e74a43a033ad8c22dee253e",
     "library/files/minutes/2024-12-18-board-minutes.txt": "8b74007e133688d093df61c0f89b92e7955d7df8873892c8b9438f7048396c0e",
@@ -96,11 +97,11 @@
     "library/files/notice/2026-07-15-meeting-notice.txt": "94357757a90cff0fc26f26899f11ff384fe1e8985911ad01a10411104e21a734",
     "library/files/notice/2026-08-19-meeting-notice.txt": "db90a8f73e02199149a78db77ad01c200103c614533239c9924f41b5798fdab3",
     "library/files/notice/2026-09-16-meeting-notice.txt": "a50b83b0929b87449094ab498b130ff139b1ef53702883abc50b73d442655852",
+    "library/files/notice/2026-10-17-notice-of-regular-board-meeting.txt": "636cad11d06b9d605132a5d43a0c7fec7d643a7aa3013b21119b08b32592d0c6",
     "library/files/policy/2016-02-10-conflict-of-interest-policy.txt": "26656fa2c06bec3ef8ac32abb7dfc7e1fabb2e33f869df5e0c125ddc1452cf8a",
     "library/files/policy/2024-01-17-conflict-of-interest-policy.txt": "15f7381d38917ce71f3c4d2fefb1ec6db817ee5847b966fb9fd7fe05a92d665d",
     "library/files/report/2024-11-01-annual-report.txt": "0066e5347758bf78f85323801687454baa95c8d76bfe5134932a3f5af162e82f",
-    "library/files/report/2025-11-01-annual-report.txt": "7e592d9668bc012898a15e31edba1dcff5c44afe6694ebf3edd8566ee8c66c08",
-    "library/files/notice/2026-10-17-notice-of-regular-board-meeting.txt": "636cad11d06b9d605132a5d43a0c7fec7d643a7aa3013b21119b08b32592d0c6"
+    "library/files/report/2025-11-01-annual-report.txt": "7e592d9668bc012898a15e31edba1dcff5c44afe6694ebf3edd8566ee8c66c08"
   },
   "generated_by": "demo/seed.py"
 }
