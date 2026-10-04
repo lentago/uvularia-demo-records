@@ -14,8 +14,10 @@ source: {kind: text, file: library/files/notice/2026-10-17-notice-of-regular-boa
 certainty: verified
 subjects: [meetings, board, budget]
 tags: [2026]
+corrections:
+  - {date: 2026-10-04, note: "The weekday was wrong: October 17, 2026 is a Saturday, not a Friday. Caught by the Ask box cross-checking the notice against the calendar."}
 ---
 
 # Notice of regular board meeting, October 17, 2026
 
-The board of directors will meet on Friday, October 17, 2026 at 6:30 pm at the visitor center, 14 Mill Road. The agenda includes the fall stewardship report, the 2027 budget draft, and public comment.
+The board of directors will meet on Saturday, October 17, 2026 at 6:30 pm at the visitor center, 14 Mill Road. The agenda includes the fall stewardship report, the 2027 budget draft, and public comment.
