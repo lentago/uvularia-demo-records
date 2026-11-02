@@ -72,6 +72,39 @@ Each row is defined by [`standing.schema.json`](schema/standing.schema.json):
   left, as a negative number).
 - **`history`** — the rule's track record over a trailing window:
   `{window_days, evaluated, breaches}`, or `null`. See below.
+- **`evaluated_at`** — the instant this row was judged at: `--now`, which is the
+  publish run's server-side time on a publish and the run's own time on a
+  scheduled re-evaluation. See "How current a row is", below.
+- **`valid_until`** — the instant after which the row must not be shown as
+  current: the next UTC midnight when the row's state, satisfying record or
+  deadline changes then with nothing new published, otherwise 24 hours after
+  `evaluated_at`. `gap` and `history` are as of `evaluated_at`.
+
+## How current a row is
+
+A row is true as of the instant it was evaluated, not forever. With nothing new
+published, an amber still turns red the day its deadline passes, and a green
+cadence review still turns amber when its next due date comes into the warning
+window. Evaluating only when something is published would leave a board green on
+the day the thing fell due.
+
+So the vault evaluates twice over: on every publish, at the publish run's own
+time, and on a schedule (the records template's `re-evaluate` workflow, four times
+a day), at the time that run starts. The scheduled run rewrites `standing.json` and
+the board page; it writes no receipt, because receipts record what was published
+and standing is derived from them.
+
+Every state depends only on the UTC date, so a row evaluated today is right for
+the rest of today, and can change only at a UTC midnight. The evaluator looks one
+midnight ahead: if the row would read differently there (an amber turning red the
+day after its deadline, a green turning amber as the warning window opens), its
+`valid_until` is that midnight. Otherwise it is **24 hours** after `evaluated_at`
+(`FRESH_HOURS`). A row past its `valid_until` shows as **unknown**, with the colour
+it last had in brackets, until the next run re-checks it; the 00:17 UTC run is
+there for exactly that. A board not re-checked for 24 hours has every row unknown,
+and the watcher opens an issue saying the schedule has stopped.
+Keep important deadlines on a person's calendar as well. The board tells you what
+the vault holds; only the filing receipt from the agency proves a filing landed.
 
 ## The track record, over time
 
@@ -97,7 +130,7 @@ a zero-breach pass.
 
 ## How the deadline is computed, per rule kind
 
-The four timing kinds are defined in
+The five timing kinds are defined in
 [`schema/obligation.schema.json`](schema/obligation.schema.json). The event a
 `lead`/`lag` rule refers to is the matching record's `effective` date (treated as
 the start of that day, UTC).
@@ -126,6 +159,12 @@ the start of that day, UTC).
   Wednesday-afternoon posting is late, under a plain 48-hour rule too. Days
   are UTC calendar days, the same clock every other deadline uses. `history`
   judges each past posting the same way.
+
+  With `calendar_years` as well, the rule says which years its `exclude_dates`
+  list completely. A window that reaches a day in any other year has no calendar
+  to count with, so the row is **no-data**, and that posting is left out of
+  `history`. Without this, a year with no holiday list would count its holidays
+  as working days and could pass a late notice.
 - **lag** — posted no later than *N* days **after** the event. Deadline =
   `event + N`.
 - **cadence** — a fresh approved record at least every *N* months, measured from
@@ -133,6 +172,28 @@ the start of that day, UTC).
   next review's due date). A matching record with no receipt cannot set the
   baseline, so a rule whose only record is unpublished is `no-data`.
 - **one_off** — a single fixed `due` date. Deadline = `due`.
+- **due** — the same date every year, `{month, day}` (an annual report due on
+  November 1). The row is about the next due date on or after today. Each due
+  date needs its own posting, published (UTC date) after the previous due date
+  and on or before this one; a second posting in the same year is an amendment
+  and counts for nothing more. Due dates are settled oldest first, one posting
+  each. Then:
+  - this year's due date is met → **green**, with that posting;
+  - not yet, and last year's was met on time → **green**, carrying last year's
+    posting, and **amber** inside the warning window (amber on the due date
+    itself);
+  - last year's was missed → **red**, deadline last year's due date, until this
+    year's is met on time. A posting after a missed due date is that date's late
+    posting, shown as its `published_at`; it never doubles as the next year's.
+    If a year is skipped and then one filing is made, that filing settles the
+    skipped year, and the row stays red until a second one settles this year.
+    Without a link from a record to the year it is for, one filing cannot be
+    both, and the board does not guess the kinder answer.
+
+  History starts at the first posting's due date, so a vault with nothing posted
+  is no-data (or amber in the window), never a breach read off the calendar. A
+  day past the end of a month (February 29 in other years) falls on the month's
+  last day. `history` counts each due date that has an on-time or a late posting.
 
 A rule is matched to a record by `record_type` and by a shared `subject`; among
 the matches, the most recent event (latest `effective`) is the one the board
