@@ -5,25 +5,29 @@
     "satisfied_by": "2026-10-03-annual-form-pc-filing-2026",
     "deadline": "2027-10-03",
     "published_at": "2026-10-04T03:29:32Z",
-    "gap": -361,
+    "gap": -335,
     "history": {
       "window_days": 730,
-      "evaluated": 1,
+      "evaluated": 2,
       "breaches": 0
-    }
+    },
+    "evaluated_at": "2026-11-02T00:47:15Z",
+    "valid_until": "2026-11-03T00:47:15Z"
   },
   {
     "id": "ma-corp-annual-report",
-    "state": "green",
-    "satisfied_by": "2025-11-01-annual-report",
+    "state": "red",
+    "satisfied_by": null,
     "deadline": "2026-11-01",
     "published_at": "2025-11-01T09:00:00Z",
-    "gap": -25,
+    "gap": 1,
     "history": {
       "window_days": 730,
       "evaluated": 1,
       "breaches": 0
-    }
+    },
+    "evaluated_at": "2026-11-02T00:47:15Z",
+    "valid_until": "2026-11-03T00:47:15Z"
   },
   {
     "id": "ma-oml-meeting-notice",
@@ -36,7 +40,9 @@
       "window_days": 730,
       "evaluated": 24,
       "breaches": 2
-    }
+    },
+    "evaluated_at": "2026-11-02T00:47:15Z",
+    "valid_until": "2026-11-03T00:47:15Z"
   },
   {
     "id": "ma-oml-minutes-timely",
@@ -49,6 +55,8 @@
       "window_days": 730,
       "evaluated": 23,
       "breaches": 8
-    }
+    },
+    "evaluated_at": "2026-11-02T00:47:15Z",
+    "valid_until": "2026-11-03T00:47:15Z"
   }
 ]
