@@ -37,6 +37,16 @@ Each row also carries a ``history`` object — ``{window_days, evaluated,
 breaches}`` — or ``null`` when the window holds no past deadline with a
 receipt-dated outcome. History is measured from receipts and records, never from
 the current date alone, so a later timely posting never erases an earlier breach.
+
+Each row carries ``evaluated_at``, the instant this evaluation ran (``--now``),
+because a row is only true as of that instant: an amber turns red when its
+deadline passes whether or not anything is published. The publish workflow
+evaluates at its own server-side time; the scheduled re-evaluation evaluates at
+the time it runs. Each row also carries ``valid_until``, the instant after which
+it must not be shown as current: the next UTC midnight when the row's state,
+record or deadline changes then with nothing new published, otherwise
+``FRESH_HOURS`` after ``evaluated_at``. A consumer shows a row past its
+``valid_until`` as unknown, never as the colour it last had.
 """
 
 import argparse
@@ -53,6 +63,16 @@ SCHEMA_DIR = CORE_DIR / "schema"
 # member or regulator asks "how often were you late?" over a span, not a day; two
 # years is long enough to carry more than one cycle of a monthly or annual rule.
 DEFAULT_HISTORY_DAYS = 730
+
+# The longest a standing row stays current after it was evaluated, in hours.
+# Every state here changes only when the UTC date changes, so a row is also cut
+# short at the next UTC midnight when it would change then (``valid_until``). The
+# scheduled re-evaluation runs four times a day, so a day's limit leaves three
+# runs of slack before an unchanging row lapses too. Past it, the boards show the
+# row as unknown and the watcher opens an issue: a stale green is a fake green.
+# Consumers that cannot import this module carry the same number for vaults whose
+# rows predate valid_until (schema/README.md, "standing.schema.json").
+FRESH_HOURS = 24
 
 # Reuse the schema validator the core already ships — do not re-invent it. It is
 # optional: if it cannot be imported the evaluator still runs; it only powers the
@@ -333,6 +353,11 @@ def parse_date(value):
     return date.fromisoformat(match.group(0)) if match else None
 
 
+def format_instant(moment):
+    """An aware datetime as ``YYYY-MM-DDTHH:MM:SSZ`` in UTC, whole seconds."""
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def midnight_utc(day):
     return datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
 
@@ -349,6 +374,34 @@ def add_months(day, months):
 
 def _day_gap(reference, deadline):
     return (reference - deadline).days
+
+
+def due_date(spec, year):
+    """The ``due`` rule's date in ``year``: ``{month, day}``, with a day past the
+    end of the month (February 29 in a common year) on the month's last day."""
+    return date(year, spec["month"], min(spec["day"], _month_days(year, spec["month"])))
+
+
+def _month_days(year, month):
+    leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+    return [31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+
+
+def due_on_or_after(spec, day):
+    """The first ``due`` date on or after ``day``."""
+    this_year = due_date(spec, day.year)
+    return this_year if this_year >= day else due_date(spec, day.year + 1)
+
+
+def uncovered_years(spec, deadline_instant, event):
+    """Years the lead window ``[deadline, event)`` touches that ``calendar_years``
+    does not list. Empty when the rule declares no calendar, or covers them all."""
+    years = spec.get("calendar_years")
+    if not years:
+        return set()
+    first = deadline_instant.date()
+    last = (event - timedelta(microseconds=1)).date()
+    return set(range(first.year, last.year + 1)) - set(years)
 
 
 def lead_deadline(spec, event):
@@ -457,6 +510,10 @@ def _eval_lead(obligation, records, pubs, now, warn_days):
     record = _latest(cands)
     event = midnight_utc(parse_date(record["effective"]))
     deadline_instant = lead_deadline(spec, event)
+    if uncovered_years(spec, deadline_instant, event):
+        # The window reaches a year whose holidays the rule does not list. Counting
+        # them as working days could pass a late notice: say nothing instead.
+        return _no_data(obligation["id"])
     deadline_date = deadline_instant.date()
 
     published = pubs.get(record["id"])
@@ -524,11 +581,87 @@ def _eval_one_off(obligation, records, pubs, now, warn_days):
     return _row(obligation["id"], state, None, due, None, gap)
 
 
+def _published(cands, pubs):
+    """``(when, raw, record)`` for each candidate with a receipt, oldest first."""
+    out = [(pubs[r["id"]][0], pubs[r["id"]][1], r) for r in cands if r["id"] in pubs]
+    return sorted(out, key=lambda t: (t[0], t[2]["id"]))
+
+
+def due_cycles(spec, published, through):
+    """Each yearly due date from the first posting's through ``through``, with the
+    posting that met it on time and, failing that, its late posting.
+
+    Due dates are settled oldest first, and each posting settles one. A due date
+    is met on time by the first unused posting published (UTC date) after the
+    previous due date and on or before this one; later postings in the same year
+    are amendments and settle nothing further. A due date with no on-time posting
+    takes the first unused posting after it as its late posting. So a late filing
+    never doubles as the next year's, and when a year is skipped, the next filing
+    settles the skipped year first: the board stays red until there is a filing
+    for every due date, rather than read an ambiguous one as this year's. History
+    starts at the first posting's due date: nothing before it is judged from the
+    calendar alone."""
+    if not published:
+        return []
+    used = [False] * len(published)
+    cycles = []
+    due = due_on_or_after(spec, published[0][0].date())
+    while due <= through:
+        prev = due_date(spec, due.year - 1)
+        in_year = [i for i, p in enumerate(published) if not used[i] and prev < p[0].date() <= due]
+        cycle = {"due": due, "on_time": None, "late": None}
+        if in_year:
+            cycle["on_time"] = published[in_year[0]]
+            for i in in_year:
+                used[i] = True
+        else:
+            after = [i for i, p in enumerate(published) if not used[i] and p[0].date() > due]
+            if after:
+                cycle["late"] = published[after[0]]
+                used[after[0]] = True
+        cycles.append(cycle)
+        due = due_date(spec, due.year + 1)
+    return cycles
+
+
+def _eval_due(obligation, records, pubs, now, warn_days):
+    """The same date every year. The row is about the next due date on or after
+    today: green once a posting meets it; otherwise judged by the one before it.
+    If that one was met on time, the row is green (amber inside the warning
+    window), carrying that posting. If it was missed, the row is red until the
+    next due date is met, even after a late posting."""
+    spec = obligation["due"]
+    oid = obligation["id"]
+    today = now.date()
+    current = due_on_or_after(spec, today)
+    cands = _candidates(obligation, records, {"approved", "superseded"})
+    cycles = due_cycles(spec, _published(cands, pubs), current)
+    if not cycles or cycles[-1]["due"] != current:
+        state, gap = _forward(current, now, warn_days)    # nothing to judge by yet
+        return _row(oid, state, None, current, None, gap)
+    if cycles[-1]["on_time"]:
+        when, raw, record = cycles[-1]["on_time"]
+        return _row(oid, "green", record["id"], current, raw, _day_gap(when.date(), current))
+    prev = cycles[-2] if len(cycles) > 1 else None
+    if prev is None:
+        state, gap = _forward(current, now, warn_days)
+        return _row(oid, state, None, current, None, gap)
+    if prev["on_time"]:
+        _, raw, record = prev["on_time"]
+        state, gap = _forward(current, now, warn_days)    # amber, or not yet due
+        return _row(oid, "amber" if state == "amber" else "green", record["id"], current, raw, gap)
+    if prev["late"]:
+        when, raw, _ = prev["late"]
+        return _row(oid, "red", None, prev["due"], raw, _day_gap(when.date(), prev["due"]))
+    return _row(oid, "red", None, prev["due"], None, _day_gap(today, prev["due"]))
+
+
 _EVALUATORS = (
     ("lead", _eval_lead),
     ("lag", _eval_lag),
     ("cadence", _eval_cadence),
     ("one_off", _eval_one_off),
+    ("due", _eval_due),
 )
 
 
@@ -562,7 +695,10 @@ def _historical_outcomes(obligation, records, pubs):
             published = pubs.get(record["id"])
             if published is None:
                 continue
-            deadline_instant = lead_deadline(spec, midnight_utc(parse_date(record["effective"])))
+            event = midnight_utc(parse_date(record["effective"]))
+            deadline_instant = lead_deadline(spec, event)
+            if uncovered_years(spec, deadline_instant, event):
+                continue        # no calendar for that window: not judged
             out.append((deadline_instant.date(), published[0] > deadline_instant))
         return out
 
@@ -584,6 +720,20 @@ def _historical_outcomes(obligation, records, pubs):
             return []
         when = min(published)
         return [(due, when.date() > due)]
+
+    if "due" in obligation:
+        spec = obligation["due"]
+        published = _published(cands, pubs)
+        if not published:
+            return []
+        through = due_on_or_after(spec, published[-1][0].date())
+        out = []
+        for cycle in due_cycles(spec, published, through):
+            if cycle["on_time"]:
+                out.append((cycle["due"], False))
+            elif cycle["late"]:
+                out.append((cycle["due"], True))
+        return out
 
     if "cadence" in obligation:
         spec = obligation["cadence"]
@@ -631,6 +781,27 @@ def evaluate_obligation(obligation, records, pubs, now, warn_days):
     return _no_data(obligation.get("id", "unknown"))
 
 
+# What a reader acts on. ``gap`` counts days to the deadline and ``history``
+# slides with the window, so both move every day; they are "as of evaluated_at".
+_SETTLED = ("state", "satisfied_by", "deadline")
+
+
+def valid_until(obligation, records, pubs, now, warn_days, row):
+    """The instant after which ``row`` must not be shown as current.
+
+    Every state depends on the UTC date alone, so a row can change only at a UTC
+    midnight. Within FRESH_HOURS there is at most one: if the row would read
+    differently there, with nothing new published, it lapses then; otherwise it
+    lapses FRESH_HOURS after ``now``."""
+    lapse = now + timedelta(hours=FRESH_HOURS)
+    midnight = midnight_utc(now.date() + timedelta(days=1))
+    if midnight <= lapse:
+        later = evaluate_obligation(obligation, records, pubs, midnight, warn_days)
+        if any(later.get(k) != row.get(k) for k in _SETTLED):
+            return midnight
+    return lapse
+
+
 def _duplicate_ids(obligations):
     """Return a sorted list of obligation ids that appear more than once."""
     counts = {}
@@ -644,11 +815,14 @@ def _duplicate_ids(obligations):
 def evaluate(root, now=None, warn_days=7, history_days=DEFAULT_HISTORY_DAYS):
     """Evaluate the vault at ``root`` and return the standing rows, sorted by id.
 
-    Each row carries its current state and a ``history`` summary over the trailing
-    ``history_days`` window (``None`` when the window holds nothing datable)."""
+    Each row carries its current state, a ``history`` summary over the trailing
+    ``history_days`` window (``None`` when the window holds nothing datable),
+    ``evaluated_at``, the instant ``now`` it was judged at, and ``valid_until``,
+    the instant after which it is no longer current (see ``valid_until``)."""
     root = Path(root)
     if now is None:
         now = datetime.now(timezone.utc)
+    evaluated_at = format_instant(now)
     obligations = load_obligations(root)
     dupes = _duplicate_ids(obligations)
     if dupes:
@@ -663,6 +837,8 @@ def evaluate(root, now=None, warn_days=7, history_days=DEFAULT_HISTORY_DAYS):
     for o in obligations:
         row = evaluate_obligation(o, records, pubs, now, warn_days)
         row["history"] = obligation_history(o, records, pubs, now, history_days)
+        row["evaluated_at"] = evaluated_at
+        row["valid_until"] = format_instant(valid_until(o, records, pubs, now, warn_days, row))
         rows.append(row)
     rows.sort(key=lambda r: r["id"])
     return rows

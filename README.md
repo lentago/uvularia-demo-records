@@ -10,6 +10,23 @@ You do not need to be a programmer to run it. You add a record and open a pull
 request; the checks and the publish happen on their own. Everything a check runs
 is a short, dependency-free Python file you can read in [`core/`](core/README.md).
 
+> **Read this first — everything in this repository is public the moment you
+> post it.** Issues, branches, pull requests, attachments, comments, and the
+> full commit history can be read by anyone, with no account, as soon as they
+> exist. That includes drafts, the `intake/` folder, and a file attached to an
+> "Add a record" issue. Submit only material already approved for public
+> disclosure.
+>
+> **A document that is not cleared yet?** Keep it outside this repository (on
+> your own drive or mail) until it is approved. Or redact it and get the
+> redaction approved by hand, then post the redacted copy. Do not post it "to
+> be cleaned up later": once posted it is visible, and deleting it later does
+> not remove it from history, forks, or caches. The privacy check in CI
+> ([`core/validate.py`](core/validate.py), which looks for emails, phone
+> numbers, and names on your denylist) is a **tripwire, not the first
+> boundary**. It catches a few obvious slips after the fact. It cannot tell
+> whether a document is cleared.
+
 ---
 
 ## 1. Use this template
@@ -25,7 +42,10 @@ a two-minute pull request.
 
 1. Click **Use this template → Create a new repository**. Name it
    `<your-org>-records`. Make it **public** — the vault holds only public records,
-   and branch protection is free only on public repositories.
+   and on GitHub's free plan both branch protection and GitHub Pages work only on
+   public repositories. A private repository would keep drafts and issues out of
+   view, but then the review gate and the board need a paid plan
+   ([GitHub's plans](https://docs.github.com/en/get-started/learning-about-github/githubs-plans)).
 2. Edit [`index.md`](index.md) to name your organization.
 3. Set your reviewers in [`.github/CODEOWNERS`](.github/CODEOWNERS) (replace the
    placeholder), then in **Settings → Branches** add a protection rule for `main`:
@@ -60,8 +80,9 @@ no account to read it.
 1. Open `https://<your-org>.github.io/<repo>/`. GitHub Pages can take a few
    minutes to serve the first publish.
 2. Check the top of the page: your organization's name (the first heading of
-   [`index.md`](index.md)) and **Last published**, the time the publish workflow
-   ran. That is the same server-side time as the receipt it links to.
+   [`index.md`](index.md)), **Last published**, the time the publish workflow
+   ran (the same server-side time as the receipt it links to), and **Evaluated**,
+   when the board was last judged.
 3. Read the table: one row per obligation, with its state in words (**green**,
    **amber**, **red**, or **no data**), its deadline, and the record that satisfies
    it, linked to the file in this repository. Below it are your most recent
@@ -71,8 +92,27 @@ Every publish rewrites the page from that publish's
 [`standing.json`](core/schema/standing.schema.json), so it is never out of step
 with the board data. If the standings can't be read, the page says the board has
 no data. It never shows a row as met without the data behind it. The page is
-written by [`scripts/board.py`](scripts/board.py). It is plain HTML with no
-scripts, and it reads well on a phone.
+written by [`scripts/board.py`](scripts/board.py). It is plain HTML with one small
+inline script, and it reads well on a phone.
+
+A row is true only as of when it was evaluated. With nothing new published, an
+amber still turns red the day its deadline passes, so the
+[`re-evaluate`](.github/workflows/re-evaluate.yml) workflow re-judges the board four
+times a day against what you last published and rewrites `standing.json` and this
+page. It writes no receipt: receipts record what was published, and the board is
+worked out from them. Each row says until when it stays current: the next UTC
+midnight if it would change then, otherwise **24 hours** after it was evaluated.
+A row past that shows as **unknown**, with the colour it last had in brackets,
+until the next run re-checks it, and the page says when the board was last
+checked. The page checks this when it is written, and the inline script checks it
+again against the reader's clock, so a page left behind by a stopped schedule
+still goes to unknown. The script can only hide a colour, never show one. Section
+6 says how you hear about it.
+
+> **Heads up — keep the deadlines that matter on a calendar too.** The board tells
+> you what this vault holds and when it was posted. It cannot see whether a filing
+> reached the agency. Put important deadlines on a person's calendar, and keep the
+> agency's own filing receipt.
 
 > **The site is optional.** The `<org>-site` template builds a second, branded
 > site from the same published files. It adds your own look, a page per record,
@@ -93,12 +133,14 @@ There are two doors in, and both end in a pull request a reviewer merges. Use th
 **issue form** if you have a browser and a document; use **Obsidian** if you are
 already editing the vault.
 
-> **Heads up — nothing goes live on its own.** Both doors create the record as a
-> **draft**. A draft is saved and checked, but it is *not* published. It becomes
-> public only when a reviewer sets `status: approved` and the `approved` date on
-> the pull request and merges it. That is the review step by design: you can open
-> intake freely without anything reaching the site or the board until a person
-> says so.
+> **Heads up — approval controls what is published, not who can see it.** Both
+> doors create the record as a **draft**. A draft is saved and checked, but it is
+> *not* published to the board, the corpus, the feed, or the site until a reviewer
+> sets `status: approved` and the `approved` date on the pull request and merges
+> it. That is the review step by design. It does **not** hide anything: the issue,
+> the `intake/<N>` branch, the pull request, and any attached file are in this
+> public repository and readable by anyone from the moment you post them. Attach
+> only a document that is already cleared (see the notice at the top).
 
 ### The quick way — the "Add a record" issue form
 
@@ -123,7 +165,7 @@ default way to post a record, and the one a new volunteer can do unaided.
 
 **How you know it worked:** within a minute the issue gets a comment with a pull
 request link, and the pull request's **validate** check is green. If you could not
-attach the file (a private link can need a sign-in the workflow does not have),
+attach the file (a link that needs a sign-in is one the workflow cannot open),
 the pull request still opens and says plainly that the file must be added by hand —
 it never fails silently. To fix a typo, just **edit the issue**; the same pull
 request updates.
@@ -231,9 +273,12 @@ prints one line: `telemetry not configured`.
      name. Without it, events are tagged with this repository's owner, lowercased.
 
 Each workflow then ends with two telemetry steps. The first describes the run. The
-second sends it with drosera's
+second sends it with the `loki-event` step in
+[`.github/actions/loki-event/`](.github/actions/loki-event/action.yml), a copy of
+drosera's
 [`loki-event`](https://github.com/lentago/drosera/tree/main/.github/actions/loki-event)
-step. What goes out:
+that lives in this repository, so your workflows depend on nothing outside it. What
+goes out:
 
 | Workflow | Event (`stage`) | What it carries |
 |---|---|---|
@@ -297,6 +342,7 @@ The [`watch`](.github/workflows/watch.yml) workflow runs
 | an obligation is amber or red | it turns amber or red on the board (one issue per obligation; if it goes from amber to red, the same issue is updated and gets a comment) | it is green again |
 | the Ask box serves an old copy | the box is still answering from an older corpus more than 30 minutes after a publish | the box serves the published corpus |
 | the daily cap is past 80 % | today's questions reach 80 % of the cap | today's use is under 80 % again, normally at midnight UTC |
+| the board has not been re-checked | the published board was evaluated more than 24 hours ago: the `re-evaluate` workflow has stopped or is failing | the board has been re-checked |
 
 Each issue says in plain words what happened and what to do. Every issue has the
 label `uvularia-watch` and two hidden lines at the bottom. Leave those lines alone:
@@ -316,14 +362,24 @@ Actions → Variables** and add:
 
 > **Heads up — the watch never closes on missing data.** An issue closes only when
 > the data shows the problem is gone. If the board shows *no data* for an
-> obligation, or a file can't be read, the issue stays open. If the published
-> files or the Ask box can't be reached at all, the run fails, and GitHub emails
-> you about the failed run.
+> obligation, or a file can't be read, the issue stays open. A green row that is
+> past its `valid_until` is not current, so it closes nothing either. If the published files or the Ask box can't be reached at all, the run
+> fails, and GitHub emails you about the failed run.
 
 > **Heads up — GitHub pauses schedules on quiet repositories.** On a public
 > repository with no commits for 60 days, GitHub turns scheduled workflows off and
-> emails you first. Merging a record turns it back on, or you can click
-> **Enable workflow** on the Actions tab.
+> emails you first. That includes **re-evaluate** and **watch**: once both are off,
+> nothing here can tell you, and the board page itself is what goes to unknown.
+> Merging a record turns them back on, or you can click **Enable workflow** on
+> each one's page under the Actions tab.
+
+Every alert here goes through GitHub: an issue, its email, a failed run. If GitHub
+pauses the schedules, those stop together. A channel outside GitHub would need
+three things: something that runs on its own clock (an uptime checker, or a Grafana
+Cloud alert on the events in section 5), a check it can make from outside (fetch
+`standing.json` and compare its `evaluated_at` with the time now), and somewhere to
+send it that a person reads (email or a text). The template does not set that up
+yet.
 
 **How you know it worked:** on the **Actions** tab, open **watch** and click **Run
 workflow**. The run passes, and its log ends with `Nothing to open, update, or
@@ -342,16 +398,17 @@ appends to the `published` branch:
 | Artifact | What it is |
 |---|---|
 | `corpus-<digest>.json` | the published records, in the Ask engine's entry shape — [schema](core/schema/bundle.schema.json) |
-| `index.html` | the public board page, rewritten each publish from `standing.json` (see section 2) |
-| `standing.json` | the live board data, one row per obligation — [schema](core/schema/standing.schema.json) |
+| `index.html` | the public board page, rewritten from `standing.json` on each publish and each re-evaluation (see section 2) |
+| `standing.json` | the live board data, one row per obligation — [schema](core/schema/standing.schema.json); also rewritten four times a day by [`re-evaluate.yml`](.github/workflows/re-evaluate.yml), with no receipt |
 | `feed.xml` | an Atom feed of your announcements |
 | `.nojekyll` | an empty marker that tells GitHub Pages to serve the branch exactly as written, with no Jekyll build; without it Pages rewrites the `.md` receipts to `.html` |
 | `receipts/<YYYY-MM-DDTHHMMSSZ>-<digest>.md` | the stamped, append-only receipt — [schema](core/schema/receipt.schema.json) |
 | a provenance attestation | a signed statement that this corpus came from this commit |
 
 Only **approved, public** records publish. Nothing in `intake/` is ever built —
-it is scratch space, and the checks forbid a published page from even linking to
-it. A published record is never deleted; it is superseded or retracted.
+it is scratch space (still visible in this public repository), and the checks
+forbid a published page from even linking to it. A published record is never
+deleted; it is superseded or retracted.
 
 ---
 
@@ -369,6 +426,10 @@ core. Do not edit `core/*.py` by hand — if you did, your copy would quietly
 diverge from the upstream the pin names. To update, bump the ref in `CORE_VERSION`
 and run [`scripts/sync-core.sh`](scripts/sync-core.sh), which re-downloads `core/`
 at that ref so your copy stays one `git diff` from upstream.
+
+## License
+
+The template's code and scaffolding are MIT-licensed; see [LICENSE](LICENSE). The records your organization adds are yours, under whatever terms you choose.
 
 ---
 
